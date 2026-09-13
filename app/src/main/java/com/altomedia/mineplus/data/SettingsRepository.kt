@@ -25,6 +25,8 @@ private object Keys {
     val RIG = stringPreferencesKey("rig_name")
     val PASSWORD = stringPreferencesKey("pool_password")
     val AUTO_RECONNECT = booleanPreferencesKey("auto_reconnect")
+    val RECONNECT_INTERVAL = intPreferencesKey("reconnect_interval_sec")
+    val MAX_RECONNECTS = intPreferencesKey("max_reconnects")
     val BACKGROUND_MINING = booleanPreferencesKey("background_mining")
     val START_ON_BOOT = booleanPreferencesKey("start_on_boot")
     val THREADS = intPreferencesKey("threads")
@@ -45,6 +47,8 @@ class SettingsRepository @Inject constructor(
             rigName = p[Keys.RIG] ?: "ANDROID01",
             password = p[Keys.PASSWORD] ?: "",
             autoReconnect = p[Keys.AUTO_RECONNECT] ?: true,
+            reconnectIntervalSec = p[Keys.RECONNECT_INTERVAL] ?: 10,
+            maxReconnects = p[Keys.MAX_RECONNECTS] ?: 5,
             backgroundMining = p[Keys.BACKGROUND_MINING] ?: true,
             startOnBoot = p[Keys.START_ON_BOOT] ?: false,
             threads = p[Keys.THREADS] ?: 1
@@ -64,6 +68,8 @@ class SettingsRepository @Inject constructor(
             p[Keys.RIG] = s.rigName
             p[Keys.PASSWORD] = s.password
             p[Keys.AUTO_RECONNECT] = s.autoReconnect
+            p[Keys.RECONNECT_INTERVAL] = s.reconnectIntervalSec
+            p[Keys.MAX_RECONNECTS] = s.maxReconnects
             p[Keys.BACKGROUND_MINING] = s.backgroundMining
             p[Keys.START_ON_BOOT] = s.startOnBoot
             p[Keys.THREADS] = s.threads

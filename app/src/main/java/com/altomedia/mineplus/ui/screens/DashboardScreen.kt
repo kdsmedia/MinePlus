@@ -45,6 +45,7 @@ import com.altomedia.mineplus.ui.theme.MineWarning
 @Composable
 fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
     val state by vm.minerState.collectAsStateWithLifecycle()
+    val reconnect by vm.reconnectState.collectAsStateWithLifecycle()
 
     val mining = state.status == MinerStatus.MINING ||
         state.status == MinerStatus.CONNECTED ||
@@ -82,6 +83,17 @@ fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
                 color = MineTextSecondary,
                 style = MaterialTheme.typography.bodyLarge
             )
+        }
+        reconnect.message?.let { msg ->
+            if (!reconnect.idle) {
+                Text(
+                    text = msg + if (reconnect.reconnecting) {
+                        " (${reconnect.retries}/${reconnect.maxRetries})"
+                    } else "",
+                    color = MineWarning,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
 
         // Hashrate - hero card

@@ -24,6 +24,7 @@ class DashboardViewModel @Inject constructor(
 
     val minerState = manager.state
     val logs = manager.logs
+    val reconnectState = manager.reconnectState
 
     private val _settings = MutableStateFlow(MinerSettings())
     val settings: StateFlow<MinerSettings> = _settings.asStateFlow()

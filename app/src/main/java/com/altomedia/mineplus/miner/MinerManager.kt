@@ -6,6 +6,7 @@ import com.altomedia.mineplus.model.LogLevel
 import com.altomedia.mineplus.model.MinerLogEntry
 import com.altomedia.mineplus.model.MinerState
 import com.altomedia.mineplus.model.MinerStatus
+import com.altomedia.mineplus.model.ReconnectState
 import com.altomedia.mineplus.service.MinerService
 import com.altomedia.mineplus.stratum.StratumClient
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -64,6 +65,12 @@ class MinerManager @Inject constructor(
 
     @Volatile
     private var endpoint: String = ""
+
+    /** Reconnect bookkeeping shared with the UI. */
+    private val _reconnectState = MutableStateFlow(
+        ReconnectState(idle = true, retries = 0, nextRetryInSec = 0)
+    )
+    val reconnectState: StateFlow<ReconnectState> = _reconnectState.asStateFlow()
 
     private fun log(level: LogLevel, message: String) {
         val entry = MinerLogEntry(System.currentTimeMillis(), level, message)
@@ -126,6 +133,7 @@ class MinerManager @Inject constructor(
 
             eng.start()
             startStatsTicker(eng)
+            startReconnectMonitor(eng)
         }
     }
 
@@ -160,7 +168,7 @@ class MinerManager @Inject constructor(
         var lastSample = System.currentTimeMillis()
         var startUptime = System.currentTimeMillis()
 
-        while (scope.isActive && isRunning) {
+        while (scope.isActive && isRunning && eng === engine) {
             val now = System.currentTimeMillis()
             val hashes = eng.totalHashes
             val elapsed = (now - lastSample).coerceAtLeast(1L)
@@ -181,6 +189,92 @@ class MinerManager @Inject constructor(
             lastSample = now
             delay(1000)
         }
+    }
+
+    /**
+     * Watches the stratum/engine and drives the reconnect loop:
+     *
+     * ```
+     * Mining -> Connection lost -> Stop current process
+     *         -> Wait interval -> Restart miner -> Connect
+     * ```
+     *
+     * When [MinerSettings.autoReconnect] is enabled, a dropped connection
+     * stops the process, waits [MinerSettings.reconnectIntervalSec], then
+     * restarts, up to [MinerSettings.maxReconnects] attempts.
+     */
+    private suspend fun startReconnectMonitor(eng: MinerEngine) {
+        val settings = settingsRepository.current()
+        if (!settings.autoReconnect) return
+
+        var retries = 0
+        var wasConnected = false
+        val maxRetries = settings.maxReconnects.coerceAtLeast(1)
+        while (scope.isActive && isRunning && eng === engine) {
+            val connected = stratum?.connected ?: false
+            if (!connected && !wasConnected) {
+                // Still in the initial connect phase — don't count retries yet.
+                delay(1000)
+                continue
+            }
+            if (!connected) {
+                retries++
+                _reconnectState.value = ReconnectState(
+                    idle = false,
+                    retries = retries,
+                    nextRetryInSec = settings.reconnectIntervalSec,
+                    maxRetries = maxRetries,
+                    message = "Connection lost"
+                )
+                log(LogLevel.WARN, "Connection lost (attempt $retries/$maxRetries)")
+
+                // Stop current process
+                eng.stop()
+
+                // Wait for the configured interval, emitting a countdown.
+                var wait = settings.reconnectIntervalSec
+                _state.value = _state.value.copy(status = MinerStatus.ERROR)
+                while (wait > 0 && isRunning && eng === engine) {
+                    _reconnectState.value = _reconnectState.value.copy(
+                        message = "Retrying in $wait sec…",
+                        nextRetryInSec = wait
+                    )
+                    delay(1000)
+                    wait--
+                }
+                if (wait <= 0) {
+                    if (retries >= maxRetries) {
+                        _reconnectState.value = _reconnectState.value.copy(
+                            message = "Gave up after $maxRetries attempts",
+                            gaveUp = true
+                        )
+                        log(LogLevel.ERROR, "Gave up after $maxRetries reconnect attempts")
+                        _state.value = _state.value.copy(status = MinerStatus.ERROR)
+                        break
+                    }
+                    restartPipeline()
+                    retries = 0
+                }
+            } else {
+                wasConnected = true
+                if (_reconnectState.value.reconnecting || _reconnectState.value.retries > 0) {
+                    _reconnectState.value = ReconnectState(idle = true)
+                    log(LogLevel.INFO, "Connection restored")
+                }
+                delay(1000)
+            }
+        }
+        _reconnectState.value = ReconnectState(idle = true)
+    }
+
+    private fun restartPipeline() {
+        log(LogLevel.INFO, "Restarting miner (auto-reconnect)…")
+        // Stop the abandoned process object and spin a fresh pipeline.
+        stratum?.stop()
+        engine?.stop()
+        process = null
+        isRunning = false
+        start()
     }
 
     fun destroy() {

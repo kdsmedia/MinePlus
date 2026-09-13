@@ -12,10 +12,16 @@ data class MinerSettings(
     val rigName: String = "ANDROID01",
     val password: String = "",
     val autoReconnect: Boolean = true,
+    val reconnectIntervalSec: Int = 10,
+    val maxReconnects: Int = 5,
     val backgroundMining: Boolean = true,
     val startOnBoot: Boolean = false,
     val threads: Int = 1
 ) {
+    companion object {
+        /** Selectable reconnect intervals, in seconds. */
+        val RECONNECT_INTERVALS: List<Int> = listOf(5, 10, 20, 30, 60)
+    }
     val endpoint: String get() = (if (useSsl) "stratum+ssl" else "stratum+tcp") + "://$host:$port"
 
     /** NiceHash style worker login. For BTC payout + X11 pool name. */

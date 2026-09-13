@@ -204,6 +204,41 @@ fun ConfigurationScreen(vm: ConfigurationViewModel = hiltViewModel()) {
             checked = s.autoReconnect,
             onCheckedChange = { checked -> vm.update { it.copy(autoReconnect = checked) } }
         )
+
+        // Reconnect interval selector
+        SettingsLabel("Reconnect Interval")
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MineCard),
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                MinerSettings.RECONNECT_INTERVALS.forEach { seconds ->
+                    ProtocolOption(
+                        label = "$seconds sec",
+                        selected = s.reconnectIntervalSec == seconds,
+                        onSelect = { vm.update { it.copy(reconnectIntervalSec = seconds) } },
+                        trailingText = null
+                    )
+                }
+            }
+        }
+
+        // Maximum retries selector
+        OutlinedTextField(
+            value = s.maxReconnects.toString(),
+            onValueChange = { newMax ->
+                vm.update { it.copy(maxReconnects = newMax.toIntOrNull() ?: it.maxReconnects) }
+            },
+            label = { Text("Max Reconnect Attempts") },
+            supportingText = {
+                Text("Maksimum retry otomatis", color = MineTextSecondary, fontSize = 11.sp)
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
         SettingsToggle(
             label = "Start on Boot",
             checked = s.startOnBoot,
@@ -244,7 +279,12 @@ private fun SettingsLabel(text: String) {
 }
 
 @Composable
-private fun ProtocolOption(label: String, selected: Boolean, onSelect: () -> Unit) {
+private fun ProtocolOption(
+    label: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    trailingText: String? = null
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
@@ -256,10 +296,11 @@ private fun ProtocolOption(label: String, selected: Boolean, onSelect: () -> Uni
         )
         Text(label, style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.weight(1f))
-        if (selected) {
+        val trailing = trailingText ?: if (label == "SSL") "stratum+ssl://x11.auto.nicehash.com:443"
+        else if (label == "TCP") "stratum+tcp://x11.auto.nicehash.com:9200" else null
+        if (selected && trailing != null) {
             Text(
-                text = if (label == "SSL") "stratum+ssl://x11.auto.nicehash.com:443"
-                else "stratum+tcp://x11.auto.nicehash.com:9200",
+                text = trailing,
                 color = MineTextSecondary,
                 fontSize = 11.sp
             )
