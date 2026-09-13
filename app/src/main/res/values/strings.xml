@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">MinePlus</string>
+    <string name="developer_name">ALTOMEDIA</string>
+
+    <string name="status_stopped">Stopped</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_mining">Mining</string>
+    <string name="status_error">Error</string>
+
+    <string name="action_start">Start Mining</string>
+    <string name="action_stop">Stop Mining</string>
+
+    <string name="hashrate">Hashrate</string>
+    <string name="accepted_shares">Accepted Shares</string>
+    <string name="rejected_shares">Rejected Shares</string>
+    <string name="uptime">Uptime</string>
+    <string name="errors">Errors</string>
+    <string name="connection">Connection</string>
+
+    <string name="settings_wallet">Wallet address</string>
+    <string name="settings_rig">Worker name</string>
+    <string name="settings_server">Pool address</string>
+    <string name="settings_port">Port</string>
+    <string name="settings_ssl">Use SSL</string>
+    <string name="settings_save">Save Settings</string>
+
+    <string name="notification_channel_name">Mining Status</string>
+    <string name="notification_channel_desc">Shows the current state of the X11 miner</string>
+    <string name="notification_title">MinePlus Running</string>
+    <string name="notification_stopped">Mining stopped</string>
+
+    <string name="action_stop_service">Stop</string>
+</resources>

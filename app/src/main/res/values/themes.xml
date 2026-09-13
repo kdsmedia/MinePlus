@@ -1,0 +1,15 @@
+<resources>
+    <style name="Theme.MinePlus" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/mine_primary</item>
+        <item name="colorPrimaryVariant">@color/mine_background</item>
+        <item name="colorOnPrimary">@color/mine_text</item>
+        <item name="colorSecondary">@color/mine_accent</item>
+        <item name="colorOnSecondary">@color/mine_text</item>
+        <item name="android:colorBackground">@color/mine_background</item>
+        <item name="colorSurface">@color/mine_surface</item>
+        <item name="android:statusBarColor">@color/mine_background</item>
+        <item name="android:navigationBarColor">@color/mine_background</item>
+        <item name="android:textColorPrimary">@color/mine_text</item>
+        <item name="android:textColorSecondary">@color/mine_text_secondary</item>
+    </style>
+</resources>

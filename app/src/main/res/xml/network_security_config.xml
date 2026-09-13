@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Default: modern TLS is enforced; only the pool host is allowed to use
+         a TLS config that trusts potentially older, pool-provided certificates. -->
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">auto.nicehash.com</domain>
+    </domain-config>
+</network-security-config>

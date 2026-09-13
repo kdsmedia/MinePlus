@@ -1,0 +1,11 @@
+<resources>
+    <color name="mine_background">#0D1117</color>
+    <color name="mine_surface">#161B22</color>
+    <color name="mine_primary">#2F81F7</color>
+    <color name="mine_accent">#58A6FF</color>
+    <color name="mine_text">#E6EDF3</color>
+    <color name="mine_text_secondary">#8B949E</color>
+    <color name="mine_success">#3FB950</color>
+    <color name="mine_danger">#F85149</color>
+    <color name="mine_warning">#D29922</color>
+</resources>
