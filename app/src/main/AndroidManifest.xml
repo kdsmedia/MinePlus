@@ -2,25 +2,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
     <!-- Internet access for the Stratum connection -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <!-- Foreground service to keep mining alive when the app is backgrounded -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <!-- System alerts so the miner window can stay visible over other apps (optional) -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- Keep the CPU busy while charging / prevent battery optimisation blocking mining -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Event notifications (mining started/stopped, safety warnings, errors) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Boot receiver: optionally resume mining after a device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <uses-feature
-        android:name="android.hardware.wifi"
-        android:required="false" />
 
     <application
         android:name=".MinePlusApp"
