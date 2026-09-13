@@ -167,6 +167,9 @@ class MinerManager @Inject constructor(
         var lastHashTotal = 0L
         var lastSample = System.currentTimeMillis()
         var startUptime = System.currentTimeMillis()
+        val history = ArrayDeque<Double>()
+        var sampleCount = 0L
+        var rateSum = 0.0
 
         while (scope.isActive && isRunning && eng === engine) {
             val now = System.currentTimeMillis()
@@ -174,21 +177,40 @@ class MinerManager @Inject constructor(
             val elapsed = (now - lastSample).coerceAtLeast(1L)
 
             val instRate = (hashes - lastHashTotal) * 1000.0 / elapsed
+            history.addLast(instRate.coerceAtLeast(0.0))
+            if (history.size > HISTORY_POINTS) history.removeFirst()
+            sampleCount++
+            rateSum += instRate.coerceAtLeast(0.0)
+
+            val accepted = eng.acceptedCount
+            val lastShareAgo = if (eng.lastShareAtMsValue > 0L)
+                (now - eng.lastShareAtMsValue) / 1000 else Long.MAX_VALUE
+
             _state.value = MinerState(
                 status = if (eng.isRunning) MinerStatus.MINING else MinerStatus.ERROR,
                 hashrate = instRate.coerceAtLeast(0.0),
-                acceptedShares = eng.acceptedCount,
+                averageHashrate = if (sampleCount > 0) rateSum / sampleCount else 0.0,
+                acceptedShares = accepted,
                 rejectedShares = eng.rejectedCount,
                 uptimeSeconds = (now - startUptime) / 1000,
                 difficulty = 0.0,
                 poolEndpoint = endpoint,
                 lastError = eng.errorMessage,
-                connected = stratum?.connected ?: false
+                connected = stratum?.connected ?: false,
+                sharesPerHour = if (accepted > 0 && (now - startUptime) > 0) {
+                    accepted * 3600.0 / ((now - startUptime) / 1000.0)
+                } else 0.0,
+                lastShareSecondsAgo = lastShareAgo,
+                hashrateHistory = history.toList()
             )
             lastHashTotal = hashes
             lastSample = now
             delay(1000)
         }
+    }
+
+    companion object {
+        private const val HISTORY_POINTS = 30  // 30 × ~1s samples
     }
 
     /**

@@ -48,6 +48,7 @@ class MinerEngine(
     private val acceptedShares = AtomicLong(0L)
     private val rejectedShares = AtomicLong(0L)
     private val lastError = java.util.concurrent.atomic.AtomicReference<String?>(null)
+    private val lastShareAtMs = AtomicLong(0L)
     private var startedAt = System.currentTimeMillis()
 
     @Volatile
@@ -64,6 +65,12 @@ class MinerEngine(
     val totalHashes: Long get() = hashesDone.get()
     val errorMessage: String? get() = lastError.get()
     val uptimeMs: Long get() = if (isRunning) System.currentTimeMillis() - startedAt else 0
+    val lastShareAtMsValue: Long get() = lastShareAtMs.get()
+
+    /** Registers a successful share for statistics. */
+    fun onShareAccepted() {
+        lastShareAtMs.set(System.currentTimeMillis())
+    }
 
     fun start() {
         if (isRunning) return
@@ -105,7 +112,12 @@ class MinerEngine(
 
     /** Result of a submitted share, forwarded from the stratum client. */
     fun onShareResult(accepted: Boolean) {
-        if (accepted) acceptedShares.incrementAndGet() else rejectedShares.incrementAndGet()
+        if (accepted) {
+            acceptedShares.incrementAndGet()
+            onShareAccepted()
+        } else {
+            rejectedShares.incrementAndGet()
+        }
         log(if (accepted) LogLevel.INFO else LogLevel.WARN,
             if (accepted) "Share accepted" else "Share rejected")
     }

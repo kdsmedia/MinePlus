@@ -13,6 +13,7 @@ val MineTextSecondary = Color(0xFF94A3B8)   // secondary text
 val MineError = Color(0xFFFF5C5C)
 val MineWarning = Color(0xFFFFB020)
 val MineBorder = Color(0xFF2A3544)
+val MineAccent = Color(0xFF00D68F)              // chart / accents
 // Kept for source compatibility with the dashboard.
 val MineSuccess = MinePrimary
 val MineDanger = MineError
