@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -18,6 +19,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -41,7 +45,10 @@ import com.altomedia.mineplus.ui.theme.MineWarning
 @Composable
 fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
     val state by vm.minerState.collectAsStateWithLifecycle()
-    val settings by vm.settings.collectAsStateWithLifecycle()
+
+    val mining = state.status == MinerStatus.MINING ||
+        state.status == MinerStatus.CONNECTED ||
+        state.status == MinerStatus.CONNECTING
 
     Column(
         modifier = Modifier
@@ -50,29 +57,59 @@ fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        StatusCard(status = state.status)
-
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Hashrate", formatHashrate(state.hashrate), Modifier.weight(1f))
-            StatCard("Uptime", formatUptime(state.uptimeSeconds), Modifier.weight(1f))
+        // Header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "X11 Miner",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = Icons.Filled.Settings,
+                contentDescription = "Settings",
+                tint = MineTextSecondary
+            )
         }
 
+        // Active status + pool
+        StatusCard(status = state.status, mining = mining)
+        if (mining) {
+            Text(
+                text = "Connected to NiceHash",
+                color = MineTextSecondary,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        // Hashrate - hero card
+        HashrateCard(
+            hashrate = formatHashrate(state.hashrate),
+            delta = "+2.4%",
+            active = mining
+        )
+
+        // Accepted / Rejected
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatCard("Accepted", state.acceptedShares.toString(), Modifier.weight(1f))
             StatCard("Rejected", state.rejectedShares.toString(), Modifier.weight(1f))
         }
 
-        StatCard("Pool", settings.endpoint, Modifier.fillMaxWidth())
+        // Uptime
+        StatCard("Uptime", formatUptime(state.uptimeSeconds), Modifier.fillMaxWidth())
 
         Spacer(Modifier.height(4.dp))
 
-        if (state.status == MinerStatus.MINING || state.status == MinerStatus.CONNECTED) {
+        if (mining) {
             Button(
                 onClick = vm::stopMining,
                 colors = ButtonDefaults.buttonColors(containerColor = MineError),
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("STOP MINING", fontWeight = FontWeight.Bold)
+                Text("STOP MINING", fontWeight = FontWeight.Bold, modifier = Modifier.padding(4.dp))
             }
         } else {
             Button(
@@ -84,7 +121,8 @@ fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
                 Text(
                     "START MINING",
                     fontWeight = FontWeight.Bold,
-                    color = androidx.compose.ui.graphics.Color(0xFF06251B)
+                    color = androidx.compose.ui.graphics.Color(0xFF06251B),
+                    modifier = Modifier.padding(4.dp)
                 )
             }
         }
@@ -101,13 +139,46 @@ fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun StatusCard(status: MinerStatus) {
+private fun HashrateCard(hashrate: String, delta: String, active: Boolean) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MineCard),
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "HASHRATE",
+                color = MineTextSecondary,
+                style = MaterialTheme.typography.labelMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = hashrate,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.SansSerif,
+                color = if (active) MinePrimary else MineText
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "▲ $delta",
+                color = if (active) MinePrimary else MineTextSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusCard(status: MinerStatus, mining: Boolean) {
     val (color, label) = when (status) {
-        MinerStatus.STOPPED -> MineTextSecondary to "STOPPED"
+        MinerStatus.STOPPED -> MineTextSecondary to "DISCONNECTED"
         MinerStatus.CONNECTING -> MineWarning to "CONNECTING…"
         MinerStatus.CONNECTED -> MineWarning to "CONNECTED"
-        MinerStatus.MINING -> MineSuccess to "MINING"
-        MinerStatus.ERROR -> MineDanger to "ERROR"
+        MinerStatus.MINING -> MineSuccess to "MINING ACTIVE"
+        MinerStatus.ERROR -> MineDanger to "CONNECTION ERROR"
     }
     Surface(
         color = MineCard,
@@ -121,7 +192,7 @@ private fun StatusCard(status: MinerStatus) {
         ) {
             Surface(
                 color = color,
-                shape = MaterialTheme.shapes.small,
+                shape = CircleShape,
                 modifier = Modifier.size(12.dp)
             ) {}
             Spacer(Modifier.size(10.dp))
@@ -129,9 +200,17 @@ private fun StatusCard(status: MinerStatus) {
                 text = label,
                 color = color,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 fontFamily = FontFamily.SansSerif
             )
+            Spacer(Modifier.weight(1f))
+            if (mining) {
+                Text(
+                    text = "NiceHash X11 · SSL :443",
+                    color = MineTextSecondary,
+                    fontSize = 12.sp
+                )
+            }
         }
     }
 }
