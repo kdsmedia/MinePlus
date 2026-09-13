@@ -13,6 +13,7 @@ import com.altomedia.mineplus.ui.screens.AboutScreen
 import com.altomedia.mineplus.ui.screens.ConfigurationScreen
 import com.altomedia.mineplus.ui.screens.DashboardScreen
 import com.altomedia.mineplus.ui.screens.LogsScreen
+import com.altomedia.mineplus.ui.screens.SplashScreen
 import com.altomedia.mineplus.ui.screens.StatisticsScreen
 
 object Destinations {
