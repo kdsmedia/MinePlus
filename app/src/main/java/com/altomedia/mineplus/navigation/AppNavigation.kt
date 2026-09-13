@@ -14,6 +14,7 @@ import com.altomedia.mineplus.ui.screens.ConfigurationScreen
 import com.altomedia.mineplus.ui.screens.DashboardScreen
 import com.altomedia.mineplus.ui.screens.DeviceScreen
 import com.altomedia.mineplus.ui.screens.LogsScreen
+import com.altomedia.mineplus.ui.screens.MiningScreen
 import com.altomedia.mineplus.ui.screens.SplashScreen
 import com.altomedia.mineplus.ui.screens.StatisticsScreen
 
@@ -61,7 +62,9 @@ fun MinePlusApp() {
                 )
             }
             composable(Destinations.DASHBOARD) { DashboardScreen() }
-            composable(Destinations.MINING) { DashboardScreen() }
+            composable(Destinations.MINING) {
+                MiningScreen(onBack = { navController.popBackStack() })
+            }
             composable(Destinations.CONFIGURATION) { ConfigurationScreen() }
             composable(Destinations.STATISTICS) { StatisticsScreen() }
             composable(Destinations.LOGS) { LogsScreen() }
