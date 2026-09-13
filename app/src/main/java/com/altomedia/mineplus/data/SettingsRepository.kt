@@ -29,6 +29,8 @@ private object Keys {
     val MAX_RECONNECTS = intPreferencesKey("max_reconnects")
     val BACKGROUND_MINING = booleanPreferencesKey("background_mining")
     val START_ON_BOOT = booleanPreferencesKey("start_on_boot")
+    val AUTO_START_ON_APP_OPEN = booleanPreferencesKey("auto_start_on_app_open")
+    val AUTO_START_ON_CHARGER = booleanPreferencesKey("auto_start_on_charger")
     val THREADS = intPreferencesKey("threads")
     val MIN_BATTERY_LEVEL = intPreferencesKey("protection_min_battery")
     val STOP_WHEN_CHARGING = booleanPreferencesKey("protection_stop_when_charging")
@@ -57,6 +59,8 @@ class SettingsRepository @Inject constructor(
             maxReconnects = p[Keys.MAX_RECONNECTS] ?: 5,
             backgroundMining = p[Keys.BACKGROUND_MINING] ?: true,
             startOnBoot = p[Keys.START_ON_BOOT] ?: false,
+            autoStartOnAppOpen = p[Keys.AUTO_START_ON_APP_OPEN] ?: false,
+            autoStartOnCharger = p[Keys.AUTO_START_ON_CHARGER] ?: false,
             threads = p[Keys.THREADS] ?: 1,
             minBatteryLevel = p[Keys.MIN_BATTERY_LEVEL] ?: 20,
             stopWhenCharging = p[Keys.STOP_WHEN_CHARGING] ?: false,
@@ -84,6 +88,8 @@ class SettingsRepository @Inject constructor(
             p[Keys.MAX_RECONNECTS] = s.maxReconnects
             p[Keys.BACKGROUND_MINING] = s.backgroundMining
             p[Keys.START_ON_BOOT] = s.startOnBoot
+            p[Keys.AUTO_START_ON_APP_OPEN] = s.autoStartOnAppOpen
+            p[Keys.AUTO_START_ON_CHARGER] = s.autoStartOnCharger
             p[Keys.THREADS] = s.threads
             p[Keys.MIN_BATTERY_LEVEL] = s.minBatteryLevel
             p[Keys.STOP_WHEN_CHARGING] = s.stopWhenCharging

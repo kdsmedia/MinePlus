@@ -255,10 +255,33 @@ fun ConfigurationScreen(vm: ConfigurationViewModel = hiltViewModel()) {
             modifier = Modifier.fillMaxWidth()
         )
 
+        // ── Auto Start ─────────────────────────────────────────────────────
+        Text(
+            text = "AUTO START",
+            style = MaterialTheme.typography.titleMedium,
+            color = MineTextSecondary,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        Text(
+            text = "Mencegah mining berjalan tanpa sengaja — semua dimatikan secara default",
+            style = MaterialTheme.typography.bodySmall,
+            color = MineTextSecondary.copy(alpha = 0.7f),
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
         SettingsToggle(
-            label = "Start on Boot",
+            label = "Start mining when app opens",
+            checked = s.autoStartOnAppOpen,
+            onCheckedChange = { checked -> vm.update { it.copy(autoStartOnAppOpen = checked) } }
+        )
+        SettingsToggle(
+            label = "Start after device reboot",
             checked = s.startOnBoot,
             onCheckedChange = { checked -> vm.update { it.copy(startOnBoot = checked) } }
+        )
+        SettingsToggle(
+            label = "Start automatically when charger connected",
+            checked = s.autoStartOnCharger,
+            onCheckedChange = { checked -> vm.update { it.copy(autoStartOnCharger = checked) } }
         )
         SettingsToggle(
             label = "Background Mining",

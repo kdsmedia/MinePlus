@@ -16,6 +16,9 @@ data class MinerSettings(
     val maxReconnects: Int = 5,
     val backgroundMining: Boolean = true,
     val startOnBoot: Boolean = false,
+    // Auto start
+    val autoStartOnAppOpen: Boolean = false,  // start mining when the app opens
+    val autoStartOnCharger: Boolean = false, // start automatically when charger connected
     val threads: Int = 1,
     // Battery protection
     val minBatteryLevel: Int = 20,        // stop mining below this %

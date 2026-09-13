@@ -57,7 +57,18 @@ class MinerService : Service() {
         fun restart(context: Context) {
             context.startService(Intent(context, MinerService::class.java).setAction(ACTION_RESTART))
         }
+
+        /** Whether the service (and its miner) is currently active. */
+        fun isRunning(): Boolean = instance?.isMining() ?: false
+
+        @Volatile
+        private var instance: MinerService? = null
     }
+
+    @Volatile
+    private var running: Boolean = false
+
+    fun isMining(): Boolean = running
 
     @Inject
     lateinit var manager: MinerManager
@@ -66,23 +77,32 @@ class MinerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
+                running = false
                 manager.stop()
                 stopForeground(STOP_FOREGROUND_DETACH)
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_RESTART -> {
+                running = true
                 manager.restart()
                 startStatsTicker()
                 return START_STICKY
             }
             else -> {
+                if (running) {
+                    // Already running; still refresh the foreground notification.
+                    startStatsTicker()
+                    return START_STICKY
+                }
+                running = true
                 startInForeground()
                 manager.start()
                 startStatsTicker()
@@ -189,6 +209,7 @@ class MinerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        instance = null
         serviceScope.cancel()
         manager.destroy()
         super.onDestroy()
