@@ -12,10 +12,14 @@ import com.altomedia.mineplus.stratum.StratumClient
  */
 class MinerProcess(
     val engine: MinerEngine,
-    val stratum: StratumClient
+    val stratum: StratumClient,
+    val parameters: MinerParameters
 ) {
     val connected: Boolean get() = stratum.connected
     val processId: Long = nextId
+
+    /** Conceptual CLI invocation used to start this process, password masked. */
+    val commandLine: String by lazy { parameters.toCommandLine(maskPassword = true) }
 
     companion object {
         private val counter = java.util.concurrent.atomic.AtomicLong(0)

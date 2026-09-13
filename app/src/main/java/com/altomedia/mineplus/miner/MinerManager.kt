@@ -94,6 +94,10 @@ class MinerManager @Inject constructor(
             val settings = settingsRepository.current()
             endpoint = settings.endpoint
 
+            // Native miner parameters (mirrors a CLI invocation).
+            val params = MinerParameters.from(settings)
+            log(LogLevel.INFO, "Native miner: ${params.toCommandLine(maskPassword = true)}")
+
             // Stratum <-> engine coupling is mediated through the manager.
             val client = StratumClient(
                 scope = scope,
@@ -110,7 +114,7 @@ class MinerManager @Inject constructor(
             )
 
             val eng = MinerEngine(scope = scope, stratum = client, log = ::log)
-            process = MinerProcess(eng, client)
+            process = MinerProcess(eng, client, params)
 
             stratum = client
             engine = eng
