@@ -27,8 +27,9 @@
 
     <string name="notification_channel_name">Mining Status</string>
     <string name="notification_channel_desc">Shows the current state of the X11 miner</string>
-    <string name="notification_title">MinePlus Running</string>
+    <string name="notification_title">X11 Miner</string>
     <string name="notification_stopped">Mining stopped</string>
 
-    <string name="action_stop_service">Stop</string>
+    <string name="action_open_service">OPEN</string>
+    <string name="action_stop_service">STOP</string>
 </resources>

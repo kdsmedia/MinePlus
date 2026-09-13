@@ -14,6 +14,8 @@ import androidx.core.app.NotificationCompat
 import com.altomedia.mineplus.MainActivity
 import com.altomedia.mineplus.R
 import com.altomedia.mineplus.miner.MinerManager
+import com.altomedia.mineplus.model.MinerState
+import com.altomedia.mineplus.model.MinerStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -90,7 +92,7 @@ class MinerService : Service() {
     }
 
     private fun startInForeground() {
-        val notification = buildNotification("Starting…")
+        val notification = buildNotification(manager.state.value)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
@@ -102,10 +104,15 @@ class MinerService : Service() {
         }
     }
 
-    private fun buildNotification(text: String): Notification {
+    private fun buildNotification(s: com.altomedia.mineplus.model.MinerState): Notification {
         val contentIntent = PendingIntent.getActivity(
             this, 0,
-            Intent(this, MainActivity::class.java),
+            Intent(this, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val openIntent = PendingIntent.getActivity(
+            this, 2,
+            Intent(this, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val stopIntent = PendingIntent.getService(
@@ -113,14 +120,37 @@ class MinerService : Service() {
             Intent(this, MinerService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        // Build the two-line body:
+        //   ● Mining
+        //   12.45 MH/s
+        //   NiceHash X11 • SSL
+        val statusLine = when (s.status) {
+            MinerStatus.MINING -> "● Mining"
+            MinerStatus.CONNECTING -> "● Connecting…"
+            MinerStatus.CONNECTED -> "● Connected"
+            MinerStatus.ERROR -> "● Error"
+            MinerStatus.STOPPED -> "● Stopped"
+        }
+        val protocol = if (s.poolEndpoint.startsWith("stratum+ssl")) "SSL" else "TCP"
+        val body = buildString {
+            appendLine(statusLine)
+            appendLine(formatHashrate(s.hashrate))
+            append("NiceHash X11 • $protocol")
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_title))
-            .setContentText(text)
+            .setContentText(body)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(contentIntent)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .addAction(0, getString(R.string.action_stop), stopIntent)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(0, getString(R.string.action_open_service), openIntent)
+            .addAction(0, getString(R.string.action_stop_service), stopIntent)
             .build()
     }
 
@@ -142,14 +172,10 @@ class MinerService : Service() {
         serviceScope.launch {
             while (manager.isRunning()) {
                 val s = manager.state.value
-                val notification = buildNotification(
-                    "Hashrate: ${formatHashrate(s.hashrate)}" +
-                        "  |  A: ${s.acceptedShares} R: ${s.rejectedShares}" +
-                        "  |  Up: ${formatUptime(s.uptimeSeconds)}"
-                )
+                val notification = buildNotification(s)
                 getSystemService(NotificationManager::class.java)
                     ?.notify(NOTIFICATION_ID, notification)
-                delay(2000)
+                delay(1000)
             }
         }
     }
@@ -158,13 +184,6 @@ class MinerService : Service() {
         h >= 1_000_000 -> "%.2f MH/s".format(h / 1_000_000)
         h >= 1_000 -> "%.2f KH/s".format(h / 1_000)
         else -> "%.0f H/s".format(h)
-    }
-
-    private fun formatUptime(sec: Long): String {
-        val h = sec / 3600
-        val m = (sec % 3600) / 60
-        val s = sec % 60
-        return "%02d:%02d:%02d".format(h, m, s)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
