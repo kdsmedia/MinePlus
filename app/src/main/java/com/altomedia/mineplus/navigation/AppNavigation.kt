@@ -12,6 +12,7 @@ import com.altomedia.mineplus.ui.components.MinePlusBottomBar
 import com.altomedia.mineplus.ui.screens.AboutScreen
 import com.altomedia.mineplus.ui.screens.ConfigurationScreen
 import com.altomedia.mineplus.ui.screens.DashboardScreen
+import com.altomedia.mineplus.ui.screens.DeviceScreen
 import com.altomedia.mineplus.ui.screens.LogsScreen
 import com.altomedia.mineplus.ui.screens.SplashScreen
 import com.altomedia.mineplus.ui.screens.StatisticsScreen
@@ -23,6 +24,7 @@ object Destinations {
     const val CONFIGURATION = "configuration"
     const val STATISTICS = "statistics"
     const val LOGS = "logs"
+    const val DEVICE = "device"
     const val ABOUT = "about"
 }
 
@@ -63,6 +65,7 @@ fun MinePlusApp() {
             composable(Destinations.CONFIGURATION) { ConfigurationScreen() }
             composable(Destinations.STATISTICS) { StatisticsScreen() }
             composable(Destinations.LOGS) { LogsScreen() }
+            composable(Destinations.DEVICE) { DeviceScreen() }
             composable(Destinations.ABOUT) { AboutScreen() }
         }
     }

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -27,9 +28,10 @@ private data class BottomBarItem(
 private val items = listOf(
     BottomBarItem(Destinations.DASHBOARD, "Dashboard", Icons.Filled.Home),
     BottomBarItem(Destinations.MINING, "Mining", Icons.Filled.Memory),
-    BottomBarItem(Destinations.CONFIGURATION, "Config", Icons.Filled.Settings),
     BottomBarItem(Destinations.STATISTICS, "Stats", Icons.Filled.Star),
-    BottomBarItem(Destinations.LOGS, "Logs", Icons.Filled.Info)
+    BottomBarItem(Destinations.LOGS, "Logs", Icons.Filled.Info),
+    BottomBarItem(Destinations.DEVICE, "Temp", Icons.Filled.Thermostat),
+    BottomBarItem(Destinations.CONFIGURATION, "Config", Icons.Filled.Settings)
 )
 
 @Composable
