@@ -30,6 +30,10 @@ private object Keys {
     val BACKGROUND_MINING = booleanPreferencesKey("background_mining")
     val START_ON_BOOT = booleanPreferencesKey("start_on_boot")
     val THREADS = intPreferencesKey("threads")
+    val MIN_BATTERY_LEVEL = intPreferencesKey("protection_min_battery")
+    val STOP_WHEN_CHARGING = booleanPreferencesKey("protection_stop_when_charging")
+    val STOP_TEMP_C = intPreferencesKey("protection_stop_temp_c")
+    val REDUCE_INTENSITY = booleanPreferencesKey("protection_reduce_intensity")
 }
 
 /** Persisted application settings backed by DataStore. */
@@ -51,7 +55,11 @@ class SettingsRepository @Inject constructor(
             maxReconnects = p[Keys.MAX_RECONNECTS] ?: 5,
             backgroundMining = p[Keys.BACKGROUND_MINING] ?: true,
             startOnBoot = p[Keys.START_ON_BOOT] ?: false,
-            threads = p[Keys.THREADS] ?: 1
+            threads = p[Keys.THREADS] ?: 1,
+            minBatteryLevel = p[Keys.MIN_BATTERY_LEVEL] ?: 20,
+            stopWhenCharging = p[Keys.STOP_WHEN_CHARGING] ?: false,
+            stopTempC = p[Keys.STOP_TEMP_C] ?: 70,
+            reduceIntensity = p[Keys.REDUCE_INTENSITY] ?: true
         )
     }
 
@@ -73,6 +81,10 @@ class SettingsRepository @Inject constructor(
             p[Keys.BACKGROUND_MINING] = s.backgroundMining
             p[Keys.START_ON_BOOT] = s.startOnBoot
             p[Keys.THREADS] = s.threads
+            p[Keys.MIN_BATTERY_LEVEL] = s.minBatteryLevel
+            p[Keys.STOP_WHEN_CHARGING] = s.stopWhenCharging
+            p[Keys.STOP_TEMP_C] = s.stopTempC
+            p[Keys.REDUCE_INTENSITY] = s.reduceIntensity
         }
     }
 

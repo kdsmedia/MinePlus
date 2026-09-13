@@ -1,12 +1,16 @@
 package com.altomedia.mineplus.miner
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import com.altomedia.mineplus.data.SettingsRepository
 import com.altomedia.mineplus.model.LogLevel
 import com.altomedia.mineplus.model.MinerLogEntry
 import com.altomedia.mineplus.model.MinerState
 import com.altomedia.mineplus.model.MinerStatus
 import com.altomedia.mineplus.model.ReconnectState
+import java.io.File
 import com.altomedia.mineplus.service.MinerNotifier
 import com.altomedia.mineplus.service.MinerService
 import com.altomedia.mineplus.stratum.StratumClient
@@ -185,6 +189,46 @@ class MinerManager @Inject constructor(
         // calling MinerService.stop() here would re-enter this action.
     }
 
+    /**
+     * Reads the current battery level (if exposed). Returns -1 when unknown.
+     */
+    private fun batteryLevel(): Int {
+        val intent = context.registerReceiver(
+            null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        ) ?: return -1
+        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        if (level < 0 || scale <= 0) return -1
+        return (level * 100 / scale).coerceIn(0, 100)
+    }
+
+    /**
+     * Reads a coarse SoC temperature from sysfs thermal zone 0. Returns null
+     * when unavailable.
+     */
+    private fun cpuTempC(): Float? = try {
+        val raw = File("/sys/class/thermal/thermal_zone0/temp").readText().trim().toFloat()
+        if (raw in 120.0f..150_000f) raw / 1000f else raw
+    } catch (_: Exception) {
+        null
+    }
+
+    /** True when the battery-protection rules want the miner stopped. */
+    private suspend fun protectionViolation(): Pair<String, Boolean> {
+        val s = settingsRepository.current()
+        val level = batteryLevel()
+        if (s.minBatteryLevel > 0 && level in 0 until s.minBatteryLevel) {
+            return "Battery below ${s.minBatteryLevel}% ($level%)" to true
+        }
+        if (s.stopTempC > 0) {
+            val temp = cpuTempC()
+            if (temp != null && temp >= s.stopTempC) {
+                return "Temperature above ${s.stopTempC}°C (${temp.toInt()}°C)" to true
+            }
+        }
+        return "" to false
+    }
+
     /** Restarts the pipeline (stop + start). */
     @Synchronized
     fun restart() {
@@ -211,6 +255,15 @@ class MinerManager @Inject constructor(
         var rateSum = 0.0
 
         while (scope.isActive && isRunning && eng === engine) {
+            // Battery protection guard — stop mining when the device is unsafe.
+            val (reason, violated) = protectionViolation()
+            if (violated) {
+                log(LogLevel.WARN, "Battery protection: $reason")
+                notifier.post("Mining stopped (safety)", reason)
+                stop()
+                break
+            }
+
             val now = System.currentTimeMillis()
             val hashes = eng.totalHashes
             val elapsed = (now - lastSample).coerceAtLeast(1L)

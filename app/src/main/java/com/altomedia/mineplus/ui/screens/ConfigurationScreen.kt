@@ -250,6 +250,43 @@ fun ConfigurationScreen(vm: ConfigurationViewModel = hiltViewModel()) {
             onCheckedChange = { checked -> vm.update { it.copy(backgroundMining = checked) } }
         )
 
+        // ── Battery Protection ──────────────────────────────────────────────
+        Text(
+            text = "BATTERY PROTECTION",
+            style = MaterialTheme.typography.titleMedium,
+            color = MineTextSecondary,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        Text(
+            text = "Mencegah aplikasi memaksa perangkat ketika kondisinya tidak aman",
+            style = MaterialTheme.typography.bodySmall,
+            color = MineTextSecondary.copy(alpha = 0.7f),
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        BatteryProtectionRow(
+            label = "Minimum Battery",
+            value = "${s.minBatteryLevel}%",
+            onDecrease = { vm.update { it.copy(minBatteryLevel = (s.minBatteryLevel - 5).coerceAtLeast(0)) } },
+            onIncrease = { vm.update { it.copy(minBatteryLevel = (s.minBatteryLevel + 5).coerceAtMost(100)) } }
+        )
+        SettingsToggle(
+            label = "Stop when charging",
+            checked = s.stopWhenCharging,
+            onCheckedChange = { checked -> vm.update { it.copy(stopWhenCharging = checked) } }
+        )
+        BatteryProtectionRow(
+            label = "Stop when temperature",
+            value = "${s.stopTempC}°C",
+            onDecrease = { vm.update { it.copy(stopTempC = (s.stopTempC - 5).coerceAtLeast(40)) } },
+            onIncrease = { vm.update { it.copy(stopTempC = (s.stopTempC + 5).coerceAtMost(95)) } }
+        )
+        SettingsToggle(
+            label = "Reduce intensity",
+            checked = s.reduceIntensity,
+            onCheckedChange = { checked -> vm.update { it.copy(reduceIntensity = checked) } }
+        )
+
         Spacer(Modifier.height(8.dp))
 
         Button(
@@ -340,3 +377,48 @@ private fun SettingsToggle(
     }
 }
 
+@Composable
+private fun BatteryProtectionRow(
+    label: String,
+    value: String,
+    onDecrease: () -> Unit,
+    onIncrease: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MineCard),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            AdjustmentButton(text = "−") { onDecrease() }
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MinePrimary,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+            AdjustmentButton(text = "+") { onIncrease() }
+        }
+    }
+}
+
+@Composable
+private fun AdjustmentButton(text: String, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp),
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.height(36.dp)
+    ) {
+        Text(text, fontSize = 16.sp)
+    }
+}

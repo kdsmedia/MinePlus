@@ -16,7 +16,12 @@ data class MinerSettings(
     val maxReconnects: Int = 5,
     val backgroundMining: Boolean = true,
     val startOnBoot: Boolean = false,
-    val threads: Int = 1
+    val threads: Int = 1,
+    // Battery protection
+    val minBatteryLevel: Int = 20,        // stop mining below this %
+    val stopWhenCharging: Boolean = false, // stop when the device is charging
+    val stopTempC: Int = 70,              // stop when temperature reaches this °C
+    val reduceIntensity: Boolean = true   // reduce intensity when conditions get unsafe
 ) {
     companion object {
         /** Selectable reconnect intervals, in seconds. */
