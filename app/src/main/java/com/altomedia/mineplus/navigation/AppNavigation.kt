@@ -13,8 +13,11 @@ import com.altomedia.mineplus.ui.screens.AboutScreen
 import com.altomedia.mineplus.ui.screens.ConfigurationScreen
 import com.altomedia.mineplus.ui.screens.DashboardScreen
 import com.altomedia.mineplus.ui.screens.DeviceScreen
+import com.altomedia.mineplus.ui.screens.LicensesScreen
 import com.altomedia.mineplus.ui.screens.LogsScreen
 import com.altomedia.mineplus.ui.screens.MiningScreen
+import com.altomedia.mineplus.ui.screens.PrivacyScreen
+import com.altomedia.mineplus.ui.screens.TermsScreen
 import com.altomedia.mineplus.ui.screens.SplashScreen
 import com.altomedia.mineplus.ui.screens.StatisticsScreen
 
@@ -27,6 +30,9 @@ object Destinations {
     const val LOGS = "logs"
     const val DEVICE = "device"
     const val ABOUT = "about"
+    const val LICENSES = "licenses"
+    const val PRIVACY = "privacy"
+    const val TERMS = "terms"
 }
 
 @Composable
@@ -75,7 +81,16 @@ fun MinePlusApp() {
             composable(Destinations.STATISTICS) { StatisticsScreen() }
             composable(Destinations.LOGS) { LogsScreen() }
             composable(Destinations.DEVICE) { DeviceScreen() }
-            composable(Destinations.ABOUT) { AboutScreen() }
+            composable(Destinations.ABOUT) {
+                AboutScreen(onNavigate = { route ->
+                    navController.navigate(route) {
+                        launchSingleTop = true
+                    }
+                })
+            }
+            composable(Destinations.LICENSES) { LicensesScreen() }
+            composable(Destinations.PRIVACY) { PrivacyScreen() }
+            composable(Destinations.TERMS) { TermsScreen() }
         }
     }
 }
