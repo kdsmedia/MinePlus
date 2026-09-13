@@ -3,24 +3,49 @@ package com.altomedia.mineplus.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.altomedia.mineplus.ui.config.ConfigurationViewModel
+import com.altomedia.mineplus.ui.theme.MineCard
+import com.altomedia.mineplus.ui.theme.MinePrimary
+import com.altomedia.mineplus.ui.theme.MineTextSecondary
 
 @Composable
 fun ConfigurationScreen(vm: ConfigurationViewModel = hiltViewModel()) {
@@ -34,19 +59,68 @@ fun ConfigurationScreen(vm: ConfigurationViewModel = hiltViewModel()) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Pool Configuration",
-            style = androidx.compose.material3.MaterialTheme.typography.headlineMedium
+            text = "MINING CONFIGURATION",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 4.dp)
         )
 
+        // Algorithm (fixed to X11)
+        OutlinedTextField(
+            value = s.algorithm,
+            onValueChange = { vm.update { it.copy(algorithm = it.algorithm) } },
+            label = { Text("Algorithm") },
+            readOnly = true,
+            trailingIcon = { Text("X11", color = MineTextSecondary) },
+            singleLine = true,
+            enabled = false,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Server host
         OutlinedTextField(
             value = s.host,
-            onValueChange = { newHost ->
-                vm.update { it.copy(host = newHost) }
-            },
-            label = { Text("Stratum Host") },
+            onValueChange = { newHost -> vm.update { it.copy(host = newHost) } },
+            label = { Text("Server") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
+        // Protocol: SSL / TCP radio
+        SettingsLabel("Protocol")
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MineCard),
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                ProtocolOption(
+                    label = "SSL",
+                    selected = s.useSsl,
+                    onSelect = {
+                        vm.update { it.copy(useSsl = true, port = 443) }
+                    }
+                )
+                ProtocolOption(
+                    label = "TCP",
+                    selected = !s.useSsl,
+                    onSelect = {
+                        vm.update { it.copy(useSsl = false, port = 9200) }
+                    }
+                )
+            }
+        }
+
+        // Endpoint preview (auto)
+        OutlinedTextField(
+            value = s.endpoint,
+            onValueChange = {},
+            label = { Text("Endpoint (otomatis)") },
+            readOnly = true,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Port
         OutlinedTextField(
             value = s.port.toString(),
             onValueChange = { newPort ->
@@ -57,53 +131,157 @@ fun ConfigurationScreen(vm: ConfigurationViewModel = hiltViewModel()) {
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
+        // Username / Worker
         OutlinedTextField(
-            value = s.walletAddress,
-            onValueChange = { newWallet ->
-                vm.update { it.copy(walletAddress = newWallet) }
+            value = formattedWorker(s.walletAddress, s.rigName),
+            onValueChange = { text ->
+                vm.update {
+                    val dot = text.indexOf('.')
+                    if (dot < 0) {
+                        it.copy(walletAddress = text, rigName = "MinePlus")
+                    } else {
+                        it.copy(
+                            walletAddress = text.substring(0, dot),
+                            rigName = text.substring(dot + 1)
+                        )
+                    }
+                }
             },
-            label = { Text("Wallet / BTC Address") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = s.rigName,
-            onValueChange = { newRig ->
-                vm.update { it.copy(rigName = newRig) }
+            label = { Text("Username / Worker") },
+            supportingText = {
+                Text("Format: BTC_ADDRESS.worker_name", color = MineTextSecondary, fontSize = 11.sp)
             },
-            label = { Text("Worker Name") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
 
-        // SSL toggle handled below.
-        Row(
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-        ) {
-            Text("Use SSL")
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(4.dp))
-            Switch(
-                checked = s.useSsl,
-                onCheckedChange = { vm.update { it.copy(useSsl = it.useSsl) } }
-            )
-        }
+        // Password (masked by default)
+        var passwordVisible by rememberSaveable { mutableStateOf(false) }
+        OutlinedTextField(
+            value = s.password,
+            onValueChange = { newPwd -> vm.update { it.copy(password = newPwd) } },
+            label = { Text("Password") },
+            singleLine = true,
+            visualTransformation = if (passwordVisible) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Filled.VisibilityOff
+                        else Icons.Filled.Visibility,
+                        contentDescription = if (passwordVisible) "Sembunyikan password"
+                        else "Tampilkan password",
+                        tint = MineTextSecondary
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
 
-        Row(
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-        ) {
-            Text("Start on boot")
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(4.dp))
-            Switch(
-                checked = s.startOnBoot,
-                onCheckedChange = { vm.update { it.copy(startOnBoot = it.startOnBoot) } }
-            )
-        }
+        // Toggles
+        SettingsToggle(
+            label = "Auto Reconnect",
+            checked = s.autoReconnect,
+            onCheckedChange = { checked -> vm.update { it.copy(autoReconnect = checked) } }
+        )
+        SettingsToggle(
+            label = "Start on Boot",
+            checked = s.startOnBoot,
+            onCheckedChange = { checked -> vm.update { it.copy(startOnBoot = checked) } }
+        )
+        SettingsToggle(
+            label = "Background Mining",
+            checked = s.backgroundMining,
+            onCheckedChange = { checked -> vm.update { it.copy(backgroundMining = checked) } }
+        )
+
+        Spacer(Modifier.height(8.dp))
 
         Button(
             onClick = vm::persist,
+            colors = ButtonDefaults.buttonColors(containerColor = MinePrimary),
+            shape = MaterialTheme.shapes.medium,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("SAVE")
+            Text(
+                "SAVE MINING CONFIGURATION",
+                fontWeight = FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color(0xFF06251B),
+                modifier = Modifier.padding(4.dp)
+            )
         }
     }
 }
+
+@Composable
+private fun SettingsLabel(text: String) {
+    Text(
+        text = text,
+        color = MineTextSecondary,
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.padding(top = 4.dp)
+    )
+}
+
+@Composable
+private fun ProtocolOption(label: String, selected: Boolean, onSelect: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = onSelect,
+            colors = RadioButtonDefaults.colors(selectedColor = MinePrimary)
+        )
+        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.weight(1f))
+        if (selected) {
+            Text(
+                text = if (label == "SSL") "stratum+ssl://x11.auto.nicehash.com:443"
+                else "stratum+tcp://x11.auto.nicehash.com:9200",
+                color = MineTextSecondary,
+                fontSize = 11.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsToggle(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MineCard),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MinePrimary,
+                    checkedTrackColor = MinePrimary.copy(alpha = 0.4f)
+                )
+            )
+        }
+    }
+}
+
+private fun formattedWorker(wallet: String, rig: String): String =
+    if (wallet.isBlank()) "" else "$wallet.$rig"
