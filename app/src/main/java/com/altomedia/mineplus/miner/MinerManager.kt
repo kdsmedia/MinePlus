@@ -133,13 +133,17 @@ class MinerManager @Inject constructor(
             val result = validator.validate()
             if (!result.valid) {
                 val engineError = result.errors.joinToString(" ")
+                val friendly = result.errors.joinToString(" ") { MinerErrorMapper.fromValidation(it) }
                 isRunning = false
                 _state.value = MinerState(
                     status = MinerStatus.ERROR,
-                    lastError = engineError
+                    lastError = friendly
                 )
                 log(LogLevel.ERROR, "Start blocked: $engineError")
-                notifier.post("Miner engine unavailable", result.errors.lastOrNull() ?: "")
+                notifier.post(
+                    MinerErrorMapper.titleFor(friendly),
+                    friendly
+                )
                 return@launch
             }
             _state.value = _state.value.copy(lastError = null)
@@ -310,7 +314,12 @@ class MinerManager @Inject constructor(
                 uptimeSeconds = (now - startUptime) / 1000,
                 difficulty = 0.0,
                 poolEndpoint = endpoint,
-                lastError = eng.errorMessage,
+                lastError = when {
+                    eng.isRunning -> eng.errorMessage?.let { MinerErrorMapper.fromStratum(it) }
+                    eng.errorMessage == null ->
+                        "The miner process stopped unexpectedly. Try starting it again."
+                    else -> MinerErrorMapper.fromStratum(eng.errorMessage)
+                },
                 connected = stratum?.connected ?: false,
                 sharesPerHour = if (accepted > 0 && (now - startUptime) > 0) {
                     accepted * 3600.0 / ((now - startUptime) / 1000.0)
@@ -390,7 +399,10 @@ class MinerManager @Inject constructor(
                         )
                         log(LogLevel.ERROR, "Gave up after $maxRetries reconnect attempts")
                         _state.value = _state.value.copy(status = MinerStatus.ERROR)
-                        notifier.post("Miner error", "Gave up reconnecting after $maxRetries attempts")
+                        notifier.post(
+                            "Stratum connection failed",
+                            "Could not reconnect to the mining pool after $maxRetries attempts."
+                        )
                         break
                     }
                     restartPipeline()

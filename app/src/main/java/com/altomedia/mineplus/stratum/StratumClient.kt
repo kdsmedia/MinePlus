@@ -1,6 +1,7 @@
 package com.altomedia.mineplus.stratum
 
 import com.altomedia.mineplus.miner.MinerEngine
+import com.altomedia.mineplus.miner.MinerErrorMapper
 import com.altomedia.mineplus.model.LogLevel
 import com.altomedia.mineplus.model.MinerSettings
 import com.altomedia.mineplus.model.StratumWork
@@ -104,7 +105,7 @@ class StratumClient(
                 // Keep the connection alive and scan for new work
                 runLoop(settings)
             } catch (t: Throwable) {
-                log(LogLevel.ERROR, "Connection error: ${t.message}")
+                log(LogLevel.ERROR, "Connection error: ${MinerErrorMapper.friendly(t)}")
                 if (connected) {
                     connected = false
                     onConnectionChanged(false)
