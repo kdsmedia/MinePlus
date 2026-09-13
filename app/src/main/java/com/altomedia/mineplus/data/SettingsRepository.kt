@@ -34,6 +34,8 @@ private object Keys {
     val STOP_WHEN_CHARGING = booleanPreferencesKey("protection_stop_when_charging")
     val STOP_TEMP_C = intPreferencesKey("protection_stop_temp_c")
     val REDUCE_INTENSITY = booleanPreferencesKey("protection_reduce_intensity")
+    val INTENSITY_PERCENT = intPreferencesKey("intensity_percent")
+    val INTENSITY_ENABLED = booleanPreferencesKey("intensity_enabled")
 }
 
 /** Persisted application settings backed by DataStore. */
@@ -59,7 +61,9 @@ class SettingsRepository @Inject constructor(
             minBatteryLevel = p[Keys.MIN_BATTERY_LEVEL] ?: 20,
             stopWhenCharging = p[Keys.STOP_WHEN_CHARGING] ?: false,
             stopTempC = p[Keys.STOP_TEMP_C] ?: 70,
-            reduceIntensity = p[Keys.REDUCE_INTENSITY] ?: true
+            reduceIntensity = p[Keys.REDUCE_INTENSITY] ?: true,
+            miningIntensityPercent = p[Keys.INTENSITY_PERCENT] ?: 70,
+            intensityEnabled = p[Keys.INTENSITY_ENABLED] ?: true
         )
     }
 
@@ -85,6 +89,8 @@ class SettingsRepository @Inject constructor(
             p[Keys.STOP_WHEN_CHARGING] = s.stopWhenCharging
             p[Keys.STOP_TEMP_C] = s.stopTempC
             p[Keys.REDUCE_INTENSITY] = s.reduceIntensity
+            p[Keys.INTENSITY_PERCENT] = s.miningIntensityPercent
+            p[Keys.INTENSITY_ENABLED] = s.intensityEnabled
         }
     }
 

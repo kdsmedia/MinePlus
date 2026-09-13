@@ -21,7 +21,10 @@ data class MinerSettings(
     val minBatteryLevel: Int = 20,        // stop mining below this %
     val stopWhenCharging: Boolean = false, // stop when the device is charging
     val stopTempC: Int = 70,              // stop when temperature reaches this °C
-    val reduceIntensity: Boolean = true   // reduce intensity when conditions get unsafe
+    val reduceIntensity: Boolean = true,  // reduce intensity when conditions get unsafe
+    // Intensity (only shown / used when the native miner supports it)
+    val miningIntensityPercent: Int = 70, // 0..100
+    val intensityEnabled: Boolean = true
 ) {
     companion object {
         /** Selectable reconnect intervals, in seconds. */

@@ -1,6 +1,9 @@
 package com.altomedia.mineplus.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,7 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -74,6 +80,16 @@ fun ConfigurationScreen(vm: ConfigurationViewModel = hiltViewModel()) {
             singleLine = true,
             enabled = false,
             modifier = Modifier.fillMaxWidth()
+        )
+
+        // Mining Intensity — available because the native miner supports it.
+        MiningIntensitySection(
+            intensity = s.miningIntensityPercent,
+            enabled = s.intensityEnabled,
+            onToggle = { vm.update { it.copy(intensityEnabled = it) } },
+            onSelect = { newIntensity ->
+                vm.update { it.copy(miningIntensityPercent = newIntensity.coerceIn(0, 100)) }
+            }
         )
 
         // Server host
@@ -408,6 +424,145 @@ private fun BatteryProtectionRow(
             )
             AdjustmentButton(text = "+") { onIncrease() }
         }
+    }
+}
+
+@Composable
+private fun MiningIntensitySection(
+    intensity: Int,
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onSelect: (Int) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MineCard),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "MINING INTENSITY",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = onToggle,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MinePrimary,
+                        checkedTrackColor = MinePrimary.copy(alpha = 0.4f)
+                    )
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                IntensityRowItem(
+                    label = "Low",
+                    value = 30,
+                    intensity = intensity,
+                    enabled = enabled,
+                    onSelect = onSelect
+                )
+                IntensityRowItem(
+                    label = "Medium",
+                    value = 50,
+                    intensity = intensity,
+                    enabled = enabled,
+                    onSelect = onSelect
+                )
+                IntensityRowItem(
+                    label = "High",
+                    value = 90,
+                    intensity = intensity,
+                    enabled = enabled,
+                    onSelect = onSelect
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            IntensityBar(percent = intensity, enabled = enabled)
+            Text(
+                text = "Current: ${intensity}%",
+                color = if (enabled) MinePrimary else MineTextSecondary,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun IntensityRowItem(
+    label: String,
+    value: Int,
+    intensity: Int,
+    enabled: Boolean,
+    onSelect: (Int) -> Unit
+) {
+    val selected = intensity == value
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.weight(1f)
+    ) {
+        Text(
+            text = label,
+            color = when {
+                selected && enabled -> MinePrimary
+                enabled -> androidx.compose.ui.graphics.Color(0xFFCFE3FF)
+                else -> MineTextSecondary
+            },
+            fontWeight = if (selected && enabled) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 13.sp
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable(enabled = enabled) { onSelect(value) }
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            repeat(4) { idx ->
+                val idxOfPreset = when (value) { 30 -> 0; 50 -> 1; else -> 3 }
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .background(
+                            color = when {
+                                !enabled -> MineTextSecondary.copy(alpha = 0.2f)
+                                idx <= idxOfPreset -> MinePrimary
+                                else -> MineTextSecondary.copy(alpha = 0.3f)
+                            },
+                            shape = RoundedCornerShape(50)
+                        )
+                )
+                if (idx < 3) Spacer(Modifier.width(3.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun IntensityBar(percent: Int, enabled: Boolean) {
+    val barColor = if (enabled) MinePrimary.copy(alpha = 0.7f) else MineTextSecondary.copy(alpha = 0.2f)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .background(MineTextSecondary.copy(alpha = 0.15f), RoundedCornerShape(50))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction = percent / 100f)
+                .height(6.dp)
+                .background(barColor, RoundedCornerShape(50))
+        )
     }
 }
 

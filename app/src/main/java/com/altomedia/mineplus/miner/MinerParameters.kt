@@ -24,18 +24,26 @@ data class MinerParameters(
     val algorithm: String,
     val url: String,
     val user: String,
-    val password: String
+    val password: String,
+    /** Mining intensity in percent (0..100); null when not set. */
+    val intensity: Int? = null,
+    /** True when the targeted native miner supports an intensity flag. */
+    val intensitySupported: Boolean = true
 ) {
 
     /** Renders as a command-line argument list (excluding the binary name). */
     fun toArguments(maskPassword: Boolean = false): List<String> {
         val pass = if (maskPassword && password.isNotEmpty()) "********" else password
-        return listOf(
+        val args = mutableListOf(
             KEY_ALGORITHM, algorithm,
             KEY_URL, url,
             KEY_USER, user,
             KEY_PASS, pass
         )
+        if (intensitySupported && intensity != null) {
+            args += KEY_INTENSITY; args += intensity.toString()
+        }
+        return args
     }
 
     /** Renders the conceptual command line for logs/diagnostics. */
@@ -52,6 +60,10 @@ data class MinerParameters(
         private val KEY_URL: String = "--url"
         private val KEY_USER: String = "--user"
         private val KEY_PASS: String = "--pass"
+        private val KEY_INTENSITY: String = "--intensity"
+
+        /** Intensity presets offered in the UI, in percent. */
+        val INTENSITY_PRESETS: List<Int> = listOf(30, 50, 70, 90)
 
         // Alternative flag sets for other common X11 miners.
         private val CCMINER_ALGORITHM: String = "--algo"
@@ -63,7 +75,9 @@ data class MinerParameters(
             algorithm = settings.algorithm.lowercase(),
             url = settings.endpoint,
             user = settings.login,
-            password = settings.password
+            password = settings.password,
+            intensity = if (settings.intensityEnabled) settings.miningIntensityPercent else null,
+            intensitySupported = true
         )
     }
 }
