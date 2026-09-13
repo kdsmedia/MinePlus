@@ -32,6 +32,21 @@ private val DarkColorScheme = darkColorScheme(
     outline = MineBorder
 )
 
+/** Light color scheme used when "Dark Mode" is turned off in Settings. */
+private val LightColorScheme = androidx.compose.material3.lightColorScheme(
+    primary = MinePrimary,
+    secondary = MineSecondary,
+    background = Color(0xFFF3F6F9),
+    surface = Color(0xFFFFFFFF),
+    onPrimary = Color.White,
+    onSecondary = Color(0xFF06251B),
+    onBackground = Color(0xFF111827),
+    onSurface = Color(0xFF111827),
+    error = MineError,
+    surfaceVariant = Color(0xFFE9EEF4),
+    outline = Color(0xFFCBD5E1)
+)
+
 private val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
@@ -79,14 +94,15 @@ fun MinePlusTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = MineBackground.toArgb()
-            window.navigationBarColor = MineBackground.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            val bg = if (darkTheme) MineBackground else Color(0xFFF3F6F9)
+            window.statusBarColor = bg.toArgb()
+            window.navigationBarColor = bg.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
-        colorScheme = DarkColorScheme,
+        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
         typography = AppTypography,
         shapes = AppShapes,
         content = content

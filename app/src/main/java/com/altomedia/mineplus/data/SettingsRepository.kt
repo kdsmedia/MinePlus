@@ -32,6 +32,8 @@ private object Keys {
     val START_ON_BOOT = booleanPreferencesKey("start_on_boot")
     val AUTO_START_ON_APP_OPEN = booleanPreferencesKey("auto_start_on_app_open")
     val AUTO_START_ON_CHARGER = booleanPreferencesKey("auto_start_on_charger")
+    val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+    val DARK_MODE = booleanPreferencesKey("dark_mode")
     val THREADS = intPreferencesKey("threads")
     val MIN_BATTERY_LEVEL = intPreferencesKey("protection_min_battery")
     val STOP_WHEN_CHARGING = booleanPreferencesKey("protection_stop_when_charging")
@@ -62,6 +64,8 @@ class SettingsRepository @Inject constructor(
             startOnBoot = p[Keys.START_ON_BOOT] ?: false,
             autoStartOnAppOpen = p[Keys.AUTO_START_ON_APP_OPEN] ?: false,
             autoStartOnCharger = p[Keys.AUTO_START_ON_CHARGER] ?: false,
+            notificationsEnabled = p[Keys.NOTIFICATIONS_ENABLED] ?: true,
+            darkMode = p[Keys.DARK_MODE] ?: true,
             threads = p[Keys.THREADS] ?: 1,
             minBatteryLevel = p[Keys.MIN_BATTERY_LEVEL] ?: 20,
             stopWhenCharging = p[Keys.STOP_WHEN_CHARGING] ?: false,
@@ -91,6 +95,8 @@ class SettingsRepository @Inject constructor(
             p[Keys.START_ON_BOOT] = s.startOnBoot
             p[Keys.AUTO_START_ON_APP_OPEN] = s.autoStartOnAppOpen
             p[Keys.AUTO_START_ON_CHARGER] = s.autoStartOnCharger
+            p[Keys.NOTIFICATIONS_ENABLED] = s.notificationsEnabled
+            p[Keys.DARK_MODE] = s.darkMode
             p[Keys.THREADS] = s.threads
             p[Keys.MIN_BATTERY_LEVEL] = s.minBatteryLevel
             p[Keys.STOP_WHEN_CHARGING] = s.stopWhenCharging

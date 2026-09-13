@@ -65,7 +65,13 @@ fun MinePlusApp() {
             composable(Destinations.MINING) {
                 MiningScreen(onBack = { navController.popBackStack() })
             }
-            composable(Destinations.CONFIGURATION) { ConfigurationScreen() }
+            composable(Destinations.CONFIGURATION) {
+                ConfigurationScreen(onNavigate = { route ->
+                    navController.navigate(route) {
+                        launchSingleTop = true
+                    }
+                })
+            }
             composable(Destinations.STATISTICS) { StatisticsScreen() }
             composable(Destinations.LOGS) { LogsScreen() }
             composable(Destinations.DEVICE) { DeviceScreen() }

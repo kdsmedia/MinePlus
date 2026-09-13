@@ -26,7 +26,9 @@ class ConfigurationViewModel @Inject constructor(
     }
 
     fun update(transform: (MinerSettings) -> MinerSettings) {
-        _settings.value = transform(_settings.value)
+        val next = transform(_settings.value)
+        _settings.value = next
+        viewModelScope.launch { settingsRepository.save(next) }
     }
 
     fun persist() {

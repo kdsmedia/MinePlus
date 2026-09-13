@@ -8,7 +8,10 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.altomedia.mineplus.MainActivity
 import com.altomedia.mineplus.R
+import com.altomedia.mineplus.data.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,7 +23,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class MinerNotifier @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository
 ) {
     private val notificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -41,6 +45,13 @@ class MinerNotifier @Inject constructor(
 
     /** Posts a one-off, auto-dismissing event notification. */
     fun post(message: String, subtext: String? = null) {
+        // Respect the Application > Notifications toggle.
+        val allowed = try {
+            runBlocking { settingsRepository.settings.first().notificationsEnabled }
+        } catch (_: Exception) {
+            true
+        }
+        if (!allowed) return
         val contentIntent = PendingIntent.getActivity(
             context, 0,
             Intent(context, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),

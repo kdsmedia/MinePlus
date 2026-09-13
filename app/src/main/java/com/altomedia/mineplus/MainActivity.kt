@@ -6,6 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.altomedia.mineplus.data.SettingsRepository
 import com.altomedia.mineplus.miner.MinerManager
@@ -40,7 +45,11 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MinePlusTheme {
+            var darkMode by remember { mutableStateOf(true) }
+            LaunchedEffect(Unit) {
+                settingsRepository.settings.collect { darkMode = it.darkMode }
+            }
+            MinePlusTheme(darkTheme = darkMode) {
                 Surface {
                     MinePlusApp()
                 }

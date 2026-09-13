@@ -19,6 +19,8 @@ data class MinerSettings(
     // Auto start
     val autoStartOnAppOpen: Boolean = false,  // start mining when the app opens
     val autoStartOnCharger: Boolean = false, // start automatically when charger connected
+    val notificationsEnabled: Boolean = true, // show miner event notifications
+    val darkMode: Boolean = true,             // false = light theme
     val threads: Int = 1,
     // Battery protection
     val minBatteryLevel: Int = 20,        // stop mining below this %
