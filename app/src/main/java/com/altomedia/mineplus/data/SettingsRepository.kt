@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.altomedia.mineplus.crypto.CredentialCrypto
 import com.altomedia.mineplus.model.MinerSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -51,9 +52,9 @@ class SettingsRepository @Inject constructor(
             host = p[Keys.HOST] ?: "x11.auto.nicehash.com",
             port = p[Keys.PORT] ?: 443,
             useSsl = p[Keys.USE_SSL] ?: true,
-            walletAddress = p[Keys.WALLET] ?: "",
+            walletAddress = CredentialCrypto.decrypt(p[Keys.WALLET] ?: ""),
             rigName = p[Keys.RIG] ?: "ANDROID01",
-            password = p[Keys.PASSWORD] ?: "",
+            password = CredentialCrypto.decrypt(p[Keys.PASSWORD] ?: ""),
             autoReconnect = p[Keys.AUTO_RECONNECT] ?: true,
             reconnectIntervalSec = p[Keys.RECONNECT_INTERVAL] ?: 10,
             maxReconnects = p[Keys.MAX_RECONNECTS] ?: 5,
@@ -80,9 +81,9 @@ class SettingsRepository @Inject constructor(
             p[Keys.HOST] = s.host
             p[Keys.PORT] = s.port
             p[Keys.USE_SSL] = s.useSsl
-            p[Keys.WALLET] = s.walletAddress
+            p[Keys.WALLET] = CredentialCrypto.encrypt(s.walletAddress)
             p[Keys.RIG] = s.rigName
-            p[Keys.PASSWORD] = s.password
+            p[Keys.PASSWORD] = CredentialCrypto.encrypt(s.password)
             p[Keys.AUTO_RECONNECT] = s.autoReconnect
             p[Keys.RECONNECT_INTERVAL] = s.reconnectIntervalSec
             p[Keys.MAX_RECONNECTS] = s.maxReconnects

@@ -32,12 +32,13 @@ data class MinerParameters(
 ) {
 
     /** Renders as a command-line argument list (excluding the binary name). */
-    fun toArguments(maskPassword: Boolean = false): List<String> {
+    fun toArguments(maskPassword: Boolean = false, maskUser: Boolean = false): List<String> {
         val pass = if (maskPassword && password.isNotEmpty()) "********" else password
+        val userArg = if (maskUser && user.isNotEmpty()) "********" else user
         val args = mutableListOf(
             KEY_ALGORITHM, algorithm,
             KEY_URL, url,
-            KEY_USER, user,
+            KEY_USER, userArg,
             KEY_PASS, pass
         )
         if (intensitySupported && intensity != null) {
@@ -48,7 +49,7 @@ data class MinerParameters(
 
     /** Renders the conceptual command line for logs/diagnostics. */
     fun toCommandLine(maskPassword: Boolean = true): String =
-        (listOf(MINER_BINARY) + toArguments(maskPassword)).joinToString(" ")
+        (listOf(MINER_BINARY) + toArguments(maskPassword, maskUser = true)).joinToString(" ")
 
     companion object {
         // The binary name as spawned by the process wrapper.
