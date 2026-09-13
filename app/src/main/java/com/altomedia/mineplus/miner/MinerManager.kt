@@ -46,6 +46,7 @@ import javax.inject.Singleton
 class MinerManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository,
+    private val validator: MinerValidator,
     private val notifier: MinerNotifier
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -124,7 +125,29 @@ class MinerManager @Inject constructor(
     @Synchronized
     fun start() {
         if (isRunning) return
+        // Claim the start immediately so repeat taps / auto-start paths do
+        // not double-launch while the async validation is in flight.
         isRunning = true
+        scope.launch {
+            // ── VALIDATE BEFORE START ─────────────────────────────────────────
+            val result = validator.validate()
+            if (!result.valid) {
+                val engineError = result.errors.joinToString(" ")
+                isRunning = false
+                _state.value = MinerState(
+                    status = MinerStatus.ERROR,
+                    lastError = engineError
+                )
+                log(LogLevel.ERROR, "Start blocked: $engineError")
+                notifier.post("Miner engine unavailable", result.errors.lastOrNull() ?: "")
+                return@launch
+            }
+            _state.value = _state.value.copy(lastError = null)
+            launchPipeline()
+        }
+    }
+
+    private fun launchPipeline() {
         log(LogLevel.INFO, "Starting miner…")
         val proto = if (settingsRepository.current().useSsl) "SSL" else "TCP"
         notifier.post("Mining started", "NiceHash X11 • $proto")

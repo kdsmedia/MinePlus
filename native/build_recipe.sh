@@ -51,9 +51,13 @@ build_abi() {
 build_abi arm64-v8a   arm64-v8a   "-pie"
 build_abi armeabi-v7a armeabi-v7a "-pie"
 
-echo "==> Copying into app/src/main/jniLibs"
-cp "$OUT/arm64-v8a/x11miner"  "$(dirname "$0")/../app/src/main/jniLibs/arm64-v8a/x11miner"
-cp "$OUT/armeabi-v7a/x11miner" "$(dirname "$0")/../app/src/main/jniLibs/armeabi-v7a/x11miner"
-chmod +x "$(dirname "$0")/../app/src/main/jniLibs"/arm64-v8a/x11miner \
-          "$(dirname "$0")/../app/src/main/jniLibs"/armeabi-v7a/x11miner
+echo "==> Copying into app/src/main/jniLibs and assets/x11miner"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+for abi in arm64-v8a armeabi-v7a; do
+  mkdir -p "$ROOT/app/src/main/jniLibs/$abi" "$ROOT/app/src/main/assets/x11miner/$abi"
+  cp "$OUT/$abi/x11miner" "$ROOT/app/src/main/jniLibs/$abi/x11miner"
+  cp "$OUT/$abi/x11miner" "$ROOT/app/src/main/assets/x11miner/$abi/x11miner"
+  chmod +x "$ROOT/app/src/main/jniLibs/$abi/x11miner" \
+          "$ROOT/app/src/main/assets/x11miner/$abi/x11miner"
+done
 echo "Done."

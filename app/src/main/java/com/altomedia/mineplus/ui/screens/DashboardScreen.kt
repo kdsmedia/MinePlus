@@ -46,10 +46,12 @@ import com.altomedia.mineplus.ui.theme.MineWarning
 fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
     val state by vm.minerState.collectAsStateWithLifecycle()
     val reconnect by vm.reconnectState.collectAsStateWithLifecycle()
+    val validation by vm.validation.collectAsStateWithLifecycle()
 
     val mining = state.status == MinerStatus.MINING ||
         state.status == MinerStatus.CONNECTED ||
         state.status == MinerStatus.CONNECTING
+    val engineAvailable = vm.engineAvailable
 
     Column(
         modifier = Modifier
@@ -114,6 +116,41 @@ fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
 
         Spacer(Modifier.height(4.dp))
 
+        if (!engineAvailable) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MineDanger.copy(alpha = 0.12f)),
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Miner engine unavailable",
+                        color = MineDanger,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Please install/provide a compatible X11 miner engine.",
+                        color = MineTextSecondary,
+                        fontSize = 13.sp
+                    )
+                    if (validation.errors.isNotEmpty()) {
+                        Spacer(Modifier.height(10.dp))
+                        validation.errors.forEach { err ->
+                            Text(
+                                text = "• $err",
+                                color = MineDanger,
+                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         if (mining) {
             Button(
                 onClick = vm::stopMining,
@@ -126,14 +163,19 @@ fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
         } else {
             Button(
                 onClick = vm::startMining,
-                colors = ButtonDefaults.buttonColors(containerColor = MinePrimary),
+                enabled = engineAvailable,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MinePrimary,
+                    disabledContainerColor = MineCard
+                ),
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    "START MINING",
+                    if (engineAvailable) "START MINING" else "START MINING (NO ENGINE)",
                     fontWeight = FontWeight.Bold,
-                    color = androidx.compose.ui.graphics.Color(0xFF06251B),
+                    color = if (engineAvailable) androidx.compose.ui.graphics.Color(0xFF06251B)
+                            else MineTextSecondary,
                     modifier = Modifier.padding(4.dp)
                 )
             }
