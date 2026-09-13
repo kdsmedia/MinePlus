@@ -32,4 +32,7 @@
 
     <string name="action_open_service">OPEN</string>
     <string name="action_stop_service">STOP</string>
+
+    <string name="event_channel_name">Miner Events</string>
+    <string name="event_channel_desc">Important mining events like started, connected, errors</string>
 </resources>

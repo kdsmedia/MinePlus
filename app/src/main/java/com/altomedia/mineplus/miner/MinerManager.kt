@@ -7,6 +7,7 @@ import com.altomedia.mineplus.model.MinerLogEntry
 import com.altomedia.mineplus.model.MinerState
 import com.altomedia.mineplus.model.MinerStatus
 import com.altomedia.mineplus.model.ReconnectState
+import com.altomedia.mineplus.service.MinerNotifier
 import com.altomedia.mineplus.service.MinerService
 import com.altomedia.mineplus.stratum.StratumClient
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -40,9 +41,12 @@ import javax.inject.Singleton
 @Singleton
 class MinerManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val notifier: MinerNotifier
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val rejectWarned = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val highRejectThresholdPercent = 5.0
 
     private val _state = MutableStateFlow(MinerState(MinerStatus.STOPPED))
     val state: StateFlow<MinerState> = _state.asStateFlow()
@@ -78,6 +82,30 @@ class MinerManager @Inject constructor(
         android.util.Log.d("MinePlus", "[${level.name}] $message")
     }
 
+    private fun notifyConnectionEstablished() {
+        log(LogLevel.INFO, "Connection established")
+        notifier.post("Connection established", "NiceHash X11")
+    }
+
+    private fun notifyConnectionLost() {
+        log(LogLevel.WARN, "Connection lost")
+        notifier.post("Connection lost", "Reconnecting…")
+    }
+
+    private fun notifyHighRejectRate(percent: Double) {
+        notifier.post("High reject rate", String.format("%.1f%% of shares rejected", percent))
+    }
+
+    /** Emits a single "high reject rate" event when the threshold is crossed. */
+    private fun maybeWarnHighReject(pendingState: MinerState) {
+        val rate = pendingState.rejectRatePercent
+        if (rate > highRejectThresholdPercent && rejectWarned.compareAndSet(false, true)) {
+            notifyHighRejectRate(rate)
+        } else if (rate <= highRejectThresholdPercent) {
+            rejectWarned.set(false)
+        }
+    }
+
     /**
      * True when the native miner process has been spawned. Kept as a method
      * so the API contract reads naturally: `manager.isRunning()`.
@@ -94,7 +122,8 @@ class MinerManager @Inject constructor(
         if (isRunning) return
         isRunning = true
         log(LogLevel.INFO, "Starting miner…")
-
+        val proto = if (settingsRepository.current().useSsl) "SSL" else "TCP"
+        notifier.post("Mining started", "NiceHash X11 • $proto")
         MinerService.start(context)
 
         scope.launch {
@@ -117,6 +146,9 @@ class MinerManager @Inject constructor(
                     )
                 },
                 onShareResult = { accepted -> engine?.onShareResult(accepted) },
+                onConnectionChanged = { isConnected ->
+                    if (isConnected) notifyConnectionEstablished() else notifyConnectionLost()
+                },
                 log = ::log
             )
 
@@ -148,6 +180,7 @@ class MinerManager @Inject constructor(
         process = null
         _state.value = MinerState(MinerStatus.STOPPED)
         log(LogLevel.INFO, "Miner stopped")
+        notifier.post("Mining stopped")
         // Note: stopping the foreground service is owned by MinerService;
         // calling MinerService.stop() here would re-enter this action.
     }
@@ -156,6 +189,7 @@ class MinerManager @Inject constructor(
     @Synchronized
     fun restart() {
         log(LogLevel.INFO, "Restarting miner…")
+        notifier.post("Miner restarted", "NiceHash X11")
         stop()
         start()
     }
@@ -207,7 +241,10 @@ class MinerManager @Inject constructor(
                 } else 0.0,
                 lastShareSecondsAgo = lastShareAgo,
                 hashrateHistory = history.toList()
-            )
+            ).let {
+                maybeWarnHighReject(pendingState = it)
+                it
+            }
             lastHashTotal = hashes
             lastSample = now
             delay(1000)
@@ -277,6 +314,7 @@ class MinerManager @Inject constructor(
                         )
                         log(LogLevel.ERROR, "Gave up after $maxRetries reconnect attempts")
                         _state.value = _state.value.copy(status = MinerStatus.ERROR)
+                        notifier.post("Miner error", "Gave up reconnecting after $maxRetries attempts")
                         break
                     }
                     restartPipeline()
@@ -296,6 +334,7 @@ class MinerManager @Inject constructor(
 
     private fun restartPipeline() {
         log(LogLevel.INFO, "Restarting miner (auto-reconnect)…")
+        notifier.post("Miner restarted", "Reconnecting to pool")
         // Stop the abandoned process object and spin a fresh pipeline.
         stratum?.stop()
         engine?.stop()

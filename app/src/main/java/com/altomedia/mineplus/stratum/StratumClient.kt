@@ -40,6 +40,7 @@ class StratumClient(
     private val settings: () -> MinerSettings,
     private val onWork: (StratumWork) -> Unit = {},
     private val onShareResult: (Boolean) -> Unit = {},
+    private val onConnectionChanged: (Boolean) -> Unit = {},
     private val log: (LogLevel, String) -> Unit = { _, _ -> }
 ) {
     private val gson = Gson()
@@ -78,6 +79,10 @@ class StratumClient(
         running = false
         workJob?.cancel()
         closeSocket()
+        if (connected) {
+            connected = false
+            onConnectionChanged(false)
+        }
     }
 
     private suspend fun connectAndRun(settings: MinerSettings) {
@@ -87,6 +92,7 @@ class StratumClient(
                 openConnection(settings)
                 connected = true
                 log(LogLevel.INFO, "Connected to ${settings.host}:${settings.port}")
+                onConnectionChanged(true)
 
                 // Subscribe and authorize
                 subscribe()
@@ -99,7 +105,10 @@ class StratumClient(
                 runLoop(settings)
             } catch (t: Throwable) {
                 log(LogLevel.ERROR, "Connection error: ${t.message}")
-                connected = false
+                if (connected) {
+                    connected = false
+                    onConnectionChanged(false)
+                }
                 closeSocket()
 
                 if (!settings.autoReconnect) {
