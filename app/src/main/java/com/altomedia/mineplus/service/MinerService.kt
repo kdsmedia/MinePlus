@@ -13,7 +13,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.altomedia.mineplus.MainActivity
 import com.altomedia.mineplus.R
-import com.altomedia.mineplus.di.MinerController
+import com.altomedia.mineplus.miner.MinerManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +25,7 @@ import javax.inject.Inject
 
 /**
  * Foreground service that keeps the X11 miner alive when the app is
- * backgrounded. The actual mining is orchestrated by [MinerController]
+ * backgrounded. The actual mining is orchestrated by [MinerManager]
  * (native mining + stratum), this service only owns the process lifetime
  * and the ongoing notification.
  */
@@ -37,6 +37,7 @@ class MinerService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val ACTION_START = "com.altomedia.mineplus.action.START"
         private const val ACTION_STOP = "com.altomedia.mineplus.action.STOP"
+        private const val ACTION_RESTART = "com.altomedia.mineplus.action.RESTART"
 
         fun start(context: Context) {
             val intent = Intent(context, MinerService::class.java).setAction(ACTION_START)
@@ -50,10 +51,14 @@ class MinerService : Service() {
         fun stop(context: Context) {
             context.startService(Intent(context, MinerService::class.java).setAction(ACTION_STOP))
         }
+
+        fun restart(context: Context) {
+            context.startService(Intent(context, MinerService::class.java).setAction(ACTION_RESTART))
+        }
     }
 
     @Inject
-    lateinit var controller: MinerController
+    lateinit var manager: MinerManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -65,14 +70,19 @@ class MinerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
-                controller.stop()
+                manager.stop()
                 stopForeground(STOP_FOREGROUND_DETACH)
                 stopSelf()
                 return START_NOT_STICKY
             }
+            ACTION_RESTART -> {
+                manager.restart()
+                startStatsTicker()
+                return START_STICKY
+            }
             else -> {
                 startInForeground()
-                controller.start()
+                manager.start()
                 startStatsTicker()
                 return START_STICKY
             }
@@ -130,8 +140,8 @@ class MinerService : Service() {
 
     private fun startStatsTicker() {
         serviceScope.launch {
-            while (controller.isRunning) {
-                val s = controller.state.value
+            while (manager.isRunning()) {
+                val s = manager.state.value
                 val notification = buildNotification(
                     "Hashrate: ${formatHashrate(s.hashrate)}" +
                         "  |  A: ${s.acceptedShares} R: ${s.rejectedShares}" +
@@ -161,7 +171,7 @@ class MinerService : Service() {
 
     override fun onDestroy() {
         serviceScope.cancel()
-        controller.destroy()
+        manager.destroy()
         super.onDestroy()
     }
 }

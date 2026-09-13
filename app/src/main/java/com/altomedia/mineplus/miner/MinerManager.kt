@@ -1,12 +1,14 @@
-package com.altomedia.mineplus.di
+package com.altomedia.mineplus.miner
 
+import android.content.Context
 import com.altomedia.mineplus.data.SettingsRepository
-import com.altomedia.mineplus.miner.MinerEngine
 import com.altomedia.mineplus.model.LogLevel
 import com.altomedia.mineplus.model.MinerLogEntry
 import com.altomedia.mineplus.model.MinerState
 import com.altomedia.mineplus.model.MinerStatus
+import com.altomedia.mineplus.service.MinerService
 import com.altomedia.mineplus.stratum.StratumClient
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,14 +23,22 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Application-scoped controller owned by the foreground service.
+ * Orchestrates the whole mining pipeline:
  *
- * It wires the stratum client, the native mining engine and the shared
- * state exposed to the UI. The heavy hashing runs in native code; the
- * controller only coordinates and aggregates statistics.
+ * ```
+ * MinerService -> MinerManager -> Native Miner Process (MinerEngine)
+ *                                     -> X11 Algorithm (native C)
+ *                                     -> NiceHash Stratum (StratumClient)
+ * ```
+ *
+ * The manager owns the service lifetime, the stratum session and the native
+ * engine. It exposes the shared [state] and [logs] flows that the UI
+ * observes. No hashing happens in Kotlin: nonce chunks travel through JNI
+ * into the native X11 loop.
  */
 @Singleton
-class MinerController @Inject constructor(
+class MinerManager @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -39,7 +49,6 @@ class MinerController @Inject constructor(
     private val _logs = MutableStateFlow<List<MinerLogEntry>>(emptyList())
     val logs: StateFlow<List<MinerLogEntry>> = _logs.asStateFlow()
 
-    // Set up lazily so Hilt can construct us before sockets are needed.
     @Volatile
     private var engine: MinerEngine? = null
 
@@ -47,33 +56,45 @@ class MinerController @Inject constructor(
     private var stratum: StratumClient? = null
 
     @Volatile
+    private var process: MinerProcess? = null
+
+    @Volatile
     var isRunning: Boolean = false
         private set
 
-    /** Statics snapshot for the stats tick. */
     @Volatile
     private var endpoint: String = ""
 
-    /** Callback used by the native loop and stratum client. */
     private fun log(level: LogLevel, message: String) {
         val entry = MinerLogEntry(System.currentTimeMillis(), level, message)
         _logs.value = (_logs.value + entry).takeLast(200)
         android.util.Log.d("MinePlus", "[${level.name}] $message")
     }
 
+    /**
+     * True when the native miner process has been spawned. Kept as a method
+     * so the API contract reads naturally: `manager.isRunning()`.
+     */
+    fun isRunning(): Boolean = isRunning
+
+    /**
+     * Starts (or re-starts) the mining pipeline. Spins up the foreground
+     * service, connects to the stratum endpoint and starts the native
+     * process.
+     */
     @Synchronized
     fun start() {
         if (isRunning) return
         isRunning = true
         log(LogLevel.INFO, "Starting miner…")
 
+        MinerService.start(context)
+
         scope.launch {
             val settings = settingsRepository.current()
             endpoint = settings.endpoint
 
-            // Resolve the circular dependency (client <-> engine) by making
-            // the controller the mediator: the client forwards work/share
-            // events to the controller, which owns the engine properties below.
+            // Stratum <-> engine coupling is mediated through the manager.
             val client = StratumClient(
                 scope = scope,
                 settings = { settingsRepository.current() },
@@ -84,17 +105,12 @@ class MinerController @Inject constructor(
                         poolEndpoint = endpoint
                     )
                 },
-                onShareResult = { accepted ->
-                    engine?.onShareResult(accepted)
-                },
+                onShareResult = { accepted -> engine?.onShareResult(accepted) },
                 log = ::log
             )
 
-            val eng = MinerEngine(
-                scope = scope,
-                stratum = client,
-                log = ::log
-            )
+            val eng = MinerEngine(scope = scope, stratum = client, log = ::log)
+            process = MinerProcess(eng, client)
 
             stratum = client
             engine = eng
@@ -109,19 +125,31 @@ class MinerController @Inject constructor(
         }
     }
 
+    /** Stops the whole pipeline and the foreground service. */
     @Synchronized
     fun stop() {
         isRunning = false
         engine?.stop()
         stratum?.stop()
+        engine = null
+        stratum = null
+        process = null
         _state.value = MinerState(MinerStatus.STOPPED)
         log(LogLevel.INFO, "Miner stopped")
+        // Note: stopping the foreground service is owned by MinerService;
+        // calling MinerService.stop() here would re-enter this action.
     }
 
-    fun toggle(): Boolean {
-        if (isRunning) stop() else start()
-        return isRunning
+    /** Restarts the pipeline (stop + start). */
+    @Synchronized
+    fun restart() {
+        log(LogLevel.INFO, "Restarting miner…")
+        stop()
+        start()
     }
+
+    /** Returns the running native process, if any. */
+    fun getProcess(): MinerProcess? = process
 
     private suspend fun startStatsTicker(eng: MinerEngine) {
         var lastHashTotal = 0L
@@ -134,7 +162,7 @@ class MinerController @Inject constructor(
             val elapsed = (now - lastSample).coerceAtLeast(1L)
 
             val instRate = (hashes - lastHashTotal) * 1000.0 / elapsed
-            val state = MinerState(
+            _state.value = MinerState(
                 status = if (eng.isRunning) MinerStatus.MINING else MinerStatus.ERROR,
                 hashrate = instRate.coerceAtLeast(0.0),
                 acceptedShares = eng.acceptedCount,
@@ -145,7 +173,6 @@ class MinerController @Inject constructor(
                 lastError = eng.errorMessage,
                 connected = stratum?.connected ?: false
             )
-            _state.value = state
             lastHashTotal = hashes
             lastSample = now
             delay(1000)
@@ -153,11 +180,7 @@ class MinerController @Inject constructor(
     }
 
     fun destroy() {
+        stop()
         scope.cancel()
-    }
-
-    /** Allows the service to resolve the stratum connection status. */
-    fun linkStratum(client: StratumClient) {
-        stratum = client
     }
 }

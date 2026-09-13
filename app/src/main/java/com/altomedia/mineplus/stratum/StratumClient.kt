@@ -90,7 +90,7 @@ class StratumClient(
 
                 // Subscribe and authorize
                 subscribe()
-                if (settings.login.isNotEmpty()) authorize(settings.login)
+                if (settings.login.isNotEmpty()) authorize(settings.login, settings.password)
 
                 // Launch the notification listener
                 scope.launch(Dispatchers.IO) { listenForMessages() }
@@ -102,7 +102,10 @@ class StratumClient(
                 connected = false
                 closeSocket()
 
-                // Auto-reconnect with backoff
+                if (!settings.autoReconnect) {
+                    running = false
+                    break
+                }
                 delay(3000)
             }
         }
@@ -142,8 +145,8 @@ class StratumClient(
         subscribed = true
     }
 
-    private suspend fun authorize(login: String) {
-        send("mining.authorize", listOf(login, ""))
+    private suspend fun authorize(login: String, password: String = "") {
+        send("mining.authorize", listOf(login, password))
         drainUntilResult()
     }
 

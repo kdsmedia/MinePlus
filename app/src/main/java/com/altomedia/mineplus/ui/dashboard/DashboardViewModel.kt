@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.altomedia.mineplus.data.SettingsRepository
-import com.altomedia.mineplus.di.MinerController
+import com.altomedia.mineplus.miner.MinerManager
 import com.altomedia.mineplus.model.MinerSettings
 import com.altomedia.mineplus.service.MinerService
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,13 +17,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val controller: MinerController,
+    private val manager: MinerManager,
     private val settingsRepository: SettingsRepository,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
-    val minerState = controller.state
-    val logs = controller.logs
+    val minerState = manager.state
+    val logs = manager.logs
 
     private val _settings = MutableStateFlow(MinerSettings())
     val settings: StateFlow<MinerSettings> = _settings.asStateFlow()
@@ -37,21 +37,22 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun startMining() {
-        // The foreground service owns the miner process lifetime.
-        MinerService.start(appContext)
+        // MinerManager starts the foreground service + native pipeline.
+        manager.start()
     }
 
     fun stopMining() {
+        manager.stop()
         MinerService.stop(appContext)
     }
 
-    val isRunning: Boolean get() = controller.isRunning
+    val isRunning: Boolean get() = manager.isRunning()
 
     fun toggleMining() {
-        if (isRunning) {
-            MinerService.stop(appContext)
-        } else {
-            MinerService.start(appContext)
-        }
+        if (isRunning) stopMining() else startMining()
+    }
+
+    fun restartMining() {
+        manager.restart()
     }
 }
