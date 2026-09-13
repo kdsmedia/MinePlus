@@ -42,7 +42,7 @@ class SettingsRepository @Inject constructor(
             port = p[Keys.PORT] ?: 443,
             useSsl = p[Keys.USE_SSL] ?: true,
             walletAddress = p[Keys.WALLET] ?: "",
-            rigName = p[Keys.RIG] ?: "android_worker",
+            rigName = p[Keys.RIG] ?: "ANDROID01",
             password = p[Keys.PASSWORD] ?: "",
             autoReconnect = p[Keys.AUTO_RECONNECT] ?: true,
             backgroundMining = p[Keys.BACKGROUND_MINING] ?: true,

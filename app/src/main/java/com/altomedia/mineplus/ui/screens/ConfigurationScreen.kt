@@ -132,26 +132,42 @@ fun ConfigurationScreen(vm: ConfigurationViewModel = hiltViewModel()) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Username / Worker
+        // Username
         OutlinedTextField(
-            value = formattedWorker(s.walletAddress, s.rigName),
-            onValueChange = { text ->
-                vm.update {
-                    val dot = text.indexOf('.')
-                    if (dot < 0) {
-                        it.copy(walletAddress = text, rigName = "MinePlus")
-                    } else {
-                        it.copy(
-                            walletAddress = text.substring(0, dot),
-                            rigName = text.substring(dot + 1)
-                        )
-                    }
-                }
-            },
-            label = { Text("Username / Worker") },
+            value = s.walletAddress,
+            onValueChange = { newUser -> vm.update { it.copy(walletAddress = newUser) } },
+            label = { Text("Username") },
+            placeholder = { Text("YOUR_NICEHASH_USERNAME") },
             supportingText = {
-                Text("Format: BTC_ADDRESS.worker_name", color = MineTextSecondary, fontSize = 11.sp)
+                Text("Username NiceHash / BTC address", color = MineTextSecondary, fontSize = 11.sp)
             },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Worker name
+        OutlinedTextField(
+            value = s.rigName,
+            onValueChange = { newRig -> vm.update { it.copy(rigName = newRig) } },
+            label = { Text("Worker") },
+            placeholder = { Text("ANDROID01") },
+            supportingText = {
+                Text(
+                    "Contoh: ANDROID01, PHONE01, X11-01, MINER01",
+                    color = MineTextSecondary,
+                    fontSize = 11.sp
+                )
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Combined worker config preview
+        OutlinedTextField(
+            value = s.login,
+            onValueChange = {},
+            label = { Text("Konfigurasi") },
+            readOnly = true,
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -283,5 +299,3 @@ private fun SettingsToggle(
     }
 }
 
-private fun formattedWorker(wallet: String, rig: String): String =
-    if (wallet.isBlank()) "" else "$wallet.$rig"

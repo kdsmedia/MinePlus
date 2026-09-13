@@ -9,7 +9,7 @@ data class MinerSettings(
     val port: Int = 443,
     val useSsl: Boolean = true,
     val walletAddress: String = "",
-    val rigName: String = "android_worker",
+    val rigName: String = "ANDROID01",
     val password: String = "",
     val autoReconnect: Boolean = true,
     val backgroundMining: Boolean = true,
