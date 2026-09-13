@@ -56,4 +56,8 @@ class DashboardViewModel @Inject constructor(
     fun restartMining() {
         manager.restart()
     }
+
+    fun clearMinerLogs() {
+        manager.clearLogs()
+    }
 }

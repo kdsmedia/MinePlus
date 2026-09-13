@@ -163,6 +163,11 @@ class MinerManager @Inject constructor(
     /** Returns the running native process, if any. */
     fun getProcess(): MinerProcess? = process
 
+    /** Clears the in-app log. */
+    fun clearLogs() {
+        _logs.value = emptyList()
+    }
+
     private suspend fun startStatsTicker(eng: MinerEngine) {
         var lastHashTotal = 0L
         var lastSample = System.currentTimeMillis()
